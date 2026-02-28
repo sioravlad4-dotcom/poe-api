@@ -1,3 +1,12 @@
+const express = require('express');
+const puppeteer = require('puppeteer-extra');
+const StealthPlugin = require('puppeteer-extra-plugin-stealth');
+
+puppeteer.use(StealthPlugin());
+
+const app = express();
+const port = process.env.PORT || 3000;
+
 app.get('/get-schedule', async (req, res) => {
     let browser;
     try {
@@ -10,7 +19,7 @@ app.get('/get-schedule', async (req, res) => {
         const page = await browser.newPage();
         await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
 
-        // Блокуємо все зайве для швидкості
+        // Блокуємо все зайве для максимальної швидкості
         await page.setRequestInterception(true);
         page.on('request', (req) => {
             if (['image', 'stylesheet', 'font', 'media'].includes(req.resourceType())) {
@@ -21,8 +30,7 @@ app.get('/get-schedule', async (req, res) => {
         });
 
         console.log('🌐 Перехід на сайт...');
-        // Використовуємо 'networkidle2' — це означає "чекати, поки залишиться не більше 2 активних запитів"
-        // Це набагато швидше, ніж чекати повного завантаження
+        // Чекаємо, поки з'явиться хоча б щось (networkidle2)
         await page.goto(`https://www.poe.pl.ua/disconnection/power-outages/`, { 
             waitUntil: 'networkidle2', 
             timeout: 60000 
@@ -41,5 +49,10 @@ app.get('/get-schedule', async (req, res) => {
         res.status(500).send('Error: ' + error.message);
     } finally {
         if (browser) await browser.close();
+        console.log('🛑 Браузер закрито.');
     }
+});
+
+app.listen(port, () => {
+    console.log(`⚡ Сервер працює на порту ${port}`);
 });
